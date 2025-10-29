@@ -1717,8 +1717,10 @@
             // Event listeners para touch en el CANVAS
             canvas.removeEventListener('touchstart', handleCanvasTouchStart);
             canvas.removeEventListener('touchend', handleCanvasTouchEnd);
+            canvas.removeEventListener('touchmove', handleCanvasTouchMove);
             canvas.addEventListener('touchstart', handleCanvasTouchStart, {passive: false});
             canvas.addEventListener('touchend', handleCanvasTouchEnd, {passive: false});
+            canvas.addEventListener('touchmove', handleCanvasTouchMove, {passive: false});
 
             drawInitialScreen();
         }
@@ -1732,53 +1734,128 @@
             return newArray;
         }
 
-        // NUEVA FUNCIÓN: Manejar touch en el canvas
+        // NUEVA FUNCIÓN: Manejar touch en el canvas - MEJORADO
         function handleCanvasTouchStart(e) {
             e.preventDefault();
-            const touch = e.touches[0];
-            const rect = canvas.getBoundingClientRect();
-            const touchX = touch.clientX - rect.left;
-            const touchY = touch.clientY - rect.top;
             
-            // Verificar si tocó botón izquierdo
-            if (touchX >= leftButtonBounds.x && 
-                touchX <= leftButtonBounds.x + leftButtonBounds.width &&
-                touchY >= leftButtonBounds.y && 
-                touchY <= leftButtonBounds.y + leftButtonBounds.height) {
-                leftPressed = true;
-                keys['ArrowLeft'] = true;
+            // Procesar todos los toques (soporte multi-touch)
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                const rect = canvas.getBoundingClientRect();
+                const touchX = touch.clientX - rect.left;
+                const touchY = touch.clientY - rect.top;
                 
-                if (waitingForMovement) {
-                    waitingForMovement = false;
-                    gameActive = true;
-                    document.getElementById('gameMessage').textContent = '🎮 ¡Esquiva y recoge estrellas!';
-                    gameLoop();
+                // Verificar si tocó botón izquierdo
+                if (touchX >= leftButtonBounds.x && 
+                    touchX <= leftButtonBounds.x + leftButtonBounds.width &&
+                    touchY >= leftButtonBounds.y && 
+                    touchY <= leftButtonBounds.y + leftButtonBounds.height) {
+                    leftPressed = true;
+                    keys['ArrowLeft'] = true;
+                    
+                    if (waitingForMovement) {
+                        waitingForMovement = false;
+                        gameActive = true;
+                        document.getElementById('gameMessage').textContent = '🎮 ¡Esquiva y recoge estrellas!';
+                        gameLoop();
+                    }
                 }
-            }
-            
-            // Verificar si tocó botón derecho
-            if (touchX >= rightButtonBounds.x && 
-                touchX <= rightButtonBounds.x + rightButtonBounds.width &&
-                touchY >= rightButtonBounds.y && 
-                touchY <= rightButtonBounds.y + rightButtonBounds.height) {
-                rightPressed = true;
-                keys['ArrowRight'] = true;
                 
-                if (waitingForMovement) {
-                    waitingForMovement = false;
-                    gameActive = true;
-                    document.getElementById('gameMessage').textContent = '🎮 ¡Esquiva y recoge estrellas!';
-                    gameLoop();
+                // Verificar si tocó botón derecho
+                if (touchX >= rightButtonBounds.x && 
+                    touchX <= rightButtonBounds.x + rightButtonBounds.width &&
+                    touchY >= rightButtonBounds.y && 
+                    touchY <= rightButtonBounds.y + rightButtonBounds.height) {
+                    rightPressed = true;
+                    keys['ArrowRight'] = true;
+                    
+                    if (waitingForMovement) {
+                        waitingForMovement = false;
+                        gameActive = true;
+                        document.getElementById('gameMessage').textContent = '🎮 ¡Esquiva y recoge estrellas!';
+                        gameLoop();
+                    }
                 }
             }
         }
 
         function handleCanvasTouchEnd(e) {
             e.preventDefault();
-            leftPressed = false;
-            rightPressed = false;
-            keys['ArrowLeft'] = false;
-            keys['ArrowRight'] = false;
+            
+            // Si no quedan toques, soltar ambos botones
+            if (e.touches.length === 0) {
+                leftPressed = false;
+                rightPressed = false;
+                keys['ArrowLeft'] = false;
+                keys['ArrowRight'] = false;
+            } else {
+                // Revisar qué botones aún están siendo tocados
+                let leftStillTouched = false;
+                let rightStillTouched = false;
+                
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    const rect = canvas.getBoundingClientRect();
+                    const touchX = touch.clientX - rect.left;
+                    const touchY = touch.clientY - rect.top;
+                    
+                    if (touchX >= leftButtonBounds.x && 
+                        touchX <= leftButtonBounds.x + leftButtonBounds.width &&
+                        touchY >= leftButtonBounds.y && 
+                        touchY <= leftButtonBounds.y + leftButtonBounds.height) {
+                        leftStillTouched = true;
+                    }
+                    
+                    if (touchX >= rightButtonBounds.x && 
+                        touchX <= rightButtonBounds.x + rightButtonBounds.width &&
+                        touchY >= rightButtonBounds.y && 
+                        touchY <= rightButtonBounds.y + rightButtonBounds.height) {
+                        rightStillTouched = true;
+                    }
+                }
+                
+                if (!leftStillTouched) {
+                    leftPressed = false;
+                    keys['ArrowLeft'] = false;
+                }
+                if (!rightStillTouched) {
+                    rightPressed = false;
+                    keys['ArrowRight'] = false;
+                }
+            }
+        }
+
+        function handleCanvasTouchMove(e) {
+            e.preventDefault();
+            // Actualizar estado de los botones mientras se mueve el dedo
+            let leftCurrentlyTouched = false;
+            let rightCurrentlyTouched = false;
+            
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                const rect = canvas.getBoundingClientRect();
+                const touchX = touch.clientX - rect.left;
+                const touchY = touch.clientY - rect.top;
+                
+                if (touchX >= leftButtonBounds.x && 
+                    touchX <= leftButtonBounds.x + leftButtonBounds.width &&
+                    touchY >= leftButtonBounds.y && 
+                    touchY <= leftButtonBounds.y + leftButtonBounds.height) {
+                    leftCurrentlyTouched = true;
+                }
+                
+                if (touchX >= rightButtonBounds.x && 
+                    touchX <= rightButtonBounds.x + rightButtonBounds.width &&
+                    touchY >= rightButtonBounds.y && 
+                    touchY <= rightButtonBounds.y + rightButtonBounds.height) {
+                    rightCurrentlyTouched = true;
+                }
+            }
+            
+            leftPressed = leftCurrentlyTouched;
+            keys['ArrowLeft'] = leftCurrentlyTouched;
+            rightPressed = rightCurrentlyTouched;
+            keys['ArrowRight'] = rightCurrentlyTouched;
         }
 
         function handleKeyDown(e) {
